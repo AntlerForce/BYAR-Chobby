@@ -198,9 +198,16 @@ function AiListWindow:AddAi(displayName, shortName, version, options)
 		end
 		counter = counter + 1
 	end
-	
-	local battleStatusOptions = {side = math.random(0,1), teamColor = PickRandomColor(),}
-	
+
+	local battleStatusOptions = {
+		side = math.random(0,1),
+		teamColor = {
+		math.random() * 0.7 + 0.1,
+		math.random() * 0.7 + 0.1,
+		math.random() * 0.7 + 0.1,
+		},
+	}
+
 	self.lobby:AddAi(aiName, shortName, self.allyTeam, version, options, battleStatusOptions)
 	if isSingleplayer ~= true and type(options) == "table" then
 		self.lobby:SayBattle("!aiProfile " .. aiName .. " ".. Spring.Utilities.json.encode(options))

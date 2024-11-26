@@ -227,6 +227,8 @@ local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamCol
 																													comboOptions[#comboOptions + 1] = "Copy Name"
 	if (iAmBoss or iPlay) and not (control.isSingleplayer or bs.aiLib or info.isBot) and isInBattle  then			comboOptions[#comboOptions + 1] = "\255\128\128\128" .. "--------------"
 																													comboOptions[#comboOptions + 1] =  isBoss and "Disable Boss" or "Make Boss" end
+	if showSide and control.isSingleplayer and (itsme or (bs.aiLib and bs.owner == myUserName)) then				comboOptions[#comboOptions + 1] = "Change Color" end
+
 
 	if #comboOptions == 0 then
 		comboOptions[1] = Label:New {

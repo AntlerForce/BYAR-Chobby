@@ -3791,11 +3791,11 @@ local function InitializeControls(battleID, oldLobby, topPoportion, setupData)
 			side = (WG.Chobby.Configuration.lastFactionChoice or 0) ,
 			sync = (haveMapAndGame and 1) or 2, -- 0 = unknown, 1 = synced, 2 = unsynced
 			-- tamColor = PickRandomColor()
-			-- teamColor = {
-			-- 	math.random() * 0.7 + 0.1,
-			-- 	math.random() * 0.7 + 0.1,
-			-- 	math.random() * 0.7 + 0.1,
-			-- },
+			 teamColor = {
+			 	math.random() * 0.7 + 0.1,
+			 	math.random() * 0.7 + 0.1,
+			 	math.random() * 0.7 + 0.1,
+			 },
 		})
 	end
 
