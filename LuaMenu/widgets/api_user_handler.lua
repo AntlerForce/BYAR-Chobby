@@ -208,7 +208,6 @@ local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamCol
 	if not (itsme or bs.aiLib) then																					comboOptions[#comboOptions + 1] = "Message" end
 	if isInBattle and not (itsme or bs.aiLib or info.isBot) then													comboOptions[#comboOptions + 1] = "Ring" end
 	if not (itsme or bs.aiLib or isInBattle) and info.battleID and validEngine then									comboOptions[#comboOptions + 1] = "Join Battle" end
-	if not (itsme or bs.aiLib or info.isBot) then																	comboOptions[#comboOptions + 1] = "\255\128\128\128" .. "--------------" end
 	if not (itsme or bs.aiLib or info.isBot) then																	comboOptions[#comboOptions + 1] = info.isFriend and "Unfriend" or "Friend"
 									  if info.isDisregarded and info.isDisregarded == Configuration.IGNORE then     comboOptions[#comboOptions + 1] = "Unignore"
 																													comboOptions[#comboOptions + 1] = "Avoid"
@@ -960,11 +959,17 @@ local function GetUserControls(userName, opts)
 					elseif selectedName == "Copy Name" then
 						Spring.SetClipboard(userName)
 					elseif selectedName == "Kickban" then
-						lobby:SayBattle("!kickban "..userName)
+						local function YesFunc()
+							lobby:SayBattle("!kickban "..userName)
+						end
+						WG.Chobby.ConfirmationPopup(YesFunc, "Are you sure you want to kickban " .. userName .. "? This will call a vote if not boss.", nil, nil, nil, "Kickban", "Cancel", nil)
 					elseif selectedName == "Remove" then
 						userControls.lobby:RemoveAi(userName)
 					elseif selectedName == "Unfriend" then
-						userControls.lobby:RemoveFriends({userInfo.accountID})
+						local function YesFunc()
+							userControls.lobby:RemoveFriends({userInfo.accountID})
+						end
+						WG.Chobby.ConfirmationPopup(YesFunc, "Are you sure you want to remove " .. userName .. " from your friends list?", nil, nil, nil, "Unfriend", "Cancel", nil)
 					elseif selectedName == "Friend" then
 						local userInfo = userControls.lobby:GetUser(userName)
 						if userInfo and userInfo.hasFriendRequest then
@@ -1124,7 +1129,10 @@ local function GetUserControls(userName, opts)
 					elseif selectedName == "Unignore" then
 						userControls.lobby:c_user_reset_relationship(userName) -- provisionally: removes disregards and follows
 					elseif selectedName == "Ignore" or selectedName == "Unavoid" then
-						userControls.lobby:c_user_relationship(userName, Configuration.IGNORE)
+						local function YesFunc()
+							userControls.lobby:c_user_relationship(userName, Configuration.IGNORE)
+						end
+						WG.Chobby.ConfirmationPopup(YesFunc, "Are you sure you want to ignore " .. userName .. "?", nil, nil, nil, "Ignore", "Cancel", nil)
 					elseif selectedName == "Avoid" or selectedName == "Unblock" then
 						userControls.lobby:c_user_relationship(userName, Configuration.AVOID)
 					elseif selectedName == "Block" then

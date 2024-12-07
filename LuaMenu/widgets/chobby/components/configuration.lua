@@ -303,7 +303,7 @@ function Configuration:init()
 	self.useSpringRestart = false
 	self.menuMusicVolume = 0.5
 	self.menuNotificationVolume = 0.8
-	self.menuBackgroundBrightness = 1
+	self.menuBackgroundBrightness = 0.8
 	self.gameOverlayOpacity = 0.5
 	self.coopConnectDelay = 5
 	self.showMatchMakerBattles = false
@@ -377,6 +377,14 @@ function Configuration:init()
 	self.saneCharacters = {}
 	for i = 1, #saneCharacterList do
 		self.saneCharacters[saneCharacterList[i]] = true
+	end
+
+	local engineSaneCharacterList = {
+		"-", ".", " ",
+	}
+	self.engineSaneCharacters = {}
+	for i = 1, #engineSaneCharacterList do
+		self.engineSaneCharacters[engineSaneCharacterList[i]] = true
 	end
 
 	self.barMngSettings = {
@@ -1049,6 +1057,25 @@ function Configuration:IsValidEngineVersion(engineVersion)
 	--Spring.Echo(" Spring.Utilities.GetEngineVersion() ",Spring.Utilities.GetEngineVersion() )
 	--Spring.Echo(" self:GetTruncatedEngineVersion()",self:GetTruncatedEngineVersion())
 	return validengine
+end
+
+function Configuration:SanitizeEngineVersion(engineVersion)
+	local ret = ""
+	local length = string.len(engineVersion)
+	for i = 1, length do
+		local c = string.sub(engineVersion, i, i)
+		if self.saneCharacters[c] or self.engineSaneCharacters[c] then
+			ret = ret .. c
+		end
+	end
+
+	local format = "(%d+)%.(%d+)%.(%d+)%-(%d+)%-g([%x][%x][%x][%x][%x][%x][%x])%s"
+    if not ret:match(format) then
+        Spring.Echo("Invalid engine version format: " .. engineVersion)
+		ret = ""
+    end
+
+	return ret
 end
 
 function Configuration:SanitizeName(name, usedNames)
