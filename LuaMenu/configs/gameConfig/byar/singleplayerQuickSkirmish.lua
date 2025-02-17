@@ -60,14 +60,18 @@ local skirmishSetupData = {
 			name = "difficulty",
 			minimap = false,
 			options = {
+				"Beginner",
 				"Easy",
 				"Medium",
 				"Hard",
+				"Extreme"
 			},
 			optionTooltip = {
 				"For players new to RTS games.",
+				"For players with a bit of experience with RTS games.",
 				"For players familiar with RTS games.",
-				"For veteran RTS players.",
+				"For veteran RTS players who aren't afraid of losing.",
+				"For veteran BAR players who seek maximum challenge."
 			}
 		},
 		{
@@ -84,7 +88,7 @@ local skirmishSetupData = {
 }
 
 function skirmishSetupData.ApplyFunction(battleLobby, pageChoices)
-	local difficulty = pageChoices.difficulty or 1
+	local difficulty = pageChoices.difficulty or 2
 	local gameType = pageChoices.gameType or 1
 	local map = pageChoices.map or 2
 
@@ -138,9 +142,11 @@ function skirmishSetupData.ApplyFunction(battleLobby, pageChoices)
 
 	-- Handle PvE modes
 	local pveDifficultyMap = {
+		["Beginner"] = "veryeasy",
 		["Easy"] = "easy",
 		["Medium"] = "normal",
-		["Hard"] = "hard"
+		["Hard"] = "hard",
+		["Extreme"] = "veryhard"
 	}
 
 	if gameType == 4 then -- Scavengers
