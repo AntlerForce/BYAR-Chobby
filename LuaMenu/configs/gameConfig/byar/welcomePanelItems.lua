@@ -17,6 +17,13 @@ local welcomePanelItems = {
         Text = "Welcome back Commander. We hope you are ready for epic Singleplayer and Multiplayer battles. Check out our Discord and join the community!\n",
         NoPulse = true,
     },
+    {
+        Header = "BAR & Hooded Horse: A New Chapter",
+        Text = "After almost seven years of development, BAR is going professional and teaming up with Hooded Horse, one of the most respected publishers in the strategy space, to bring the game to a full Steam release." .. " \n" .. " \n" .. "Multiplayer stays free forever on the website. A paid Premium Edition on Steam will add a single-player campaign, with the same multiplayer playable across both versions." .. " \n" .. " \n" .. "Read the full announcement for all the details.",
+        Image = "LuaMenu/images/welcomepanel/hoodedhorse.png",
+        Url = "https://www.beyondallreason.info/news/beyond-all-reason-and-hooded-horse",
+        UrlText = "Read the Announcement",
+    },
 
     {
         Header = "New Map: Vittra",
