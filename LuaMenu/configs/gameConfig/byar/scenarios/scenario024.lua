@@ -25,7 +25,7 @@ local scenariodata = {
 
 	]],
 
-	mapfilename		= "Jade Empress 1.3", -- the name of the map to be displayed here
+	mapfilename		= "Jade Empress 1.41", -- the name of the map to be displayed here
 	playerstartx	= "10%", -- X position of where player comm icon should be drawn, from top left of the map
 	playerstarty	= "10%", -- Y position of where player comm icon should be drawn, from top left of the map
 	partime 		= 180, -- par time in seconds
