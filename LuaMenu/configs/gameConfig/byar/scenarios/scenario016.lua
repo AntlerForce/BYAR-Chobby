@@ -14,9 +14,9 @@ You will start on the northwestern large island, and the northern resource rich 
  
 Tips:
  - The northwest sea contains abundant metal, and tidal forces are strong for generating energy.
- - The northern island should be occupied as soon as possible, start off with a Vehicle or Bot factory to secure your starting island, then make and Aircraft plant and use transports to ferry constructors to the island. 
+ - The northern island should be occupied as soon as possible, start off with a Vehicle or Bot factory to secure your starting island, then make an Aircraft plant and use transports to ferry constructors to the island. 
  - Initially, the warring factions will be occupied with each other, but may send early aircraft and hovercraft scouts to your location. 
- - Aircraft carriers offer protection from nuclear warheads.
+ - Anti-Nuke Systems, either on land or mobile ships, offer protection from nuclear warheads.
  
  
 Scoring:
