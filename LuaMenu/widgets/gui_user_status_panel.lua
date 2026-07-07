@@ -26,12 +26,12 @@ local IMAGE_ONLINE       = IMAGE_DIR .. "online.png"
 local IMAGE_CONNECTING   = IMAGE_DIR .. "connecting.png"
 local IMAGE_OFFLINE      = IMAGE_DIR .. "offline.png"
 
-local USER_STATUS_X      = 40
-local USER_STATUS_Y      = 51
-local USER_STATUS_WIDTH  = 325
+local USER_STATUS_X      = 34
+local USER_STATUS_Y      = 52
+local USER_STATUS_WIDTH  = 200
 local ONLINE_COUNT_GAP   = 10
 local ONLINE_COUNT_X     = USER_STATUS_X + USER_STATUS_WIDTH + ONLINE_COUNT_GAP
-local ONLINE_COUNT_Y     = 53
+local ONLINE_COUNT_Y     = 54
 local ONLINE_COUNT_UPDATE_INTERVAL = 60
 
 --------------------------------------------------------------------------------
@@ -168,14 +168,14 @@ local function InitializeControls(window)
 
 	connectivityText = TextBox:New {
 		name = "connectivityText",
-		x = USER_STATUS_X,
+		x = USER_STATUS_X + 2,
 		width = 150,
-		y = 53,
+		y = USER_STATUS_Y + 5,
 		height = 20,
 		valign = "center",
 		text = "\255\180\180\180" .. i18n("offline") .. "\b",
-		objectOverrideFont = (WG.Chobby and WG.Chobby.Configuration and WG.Chobby.Configuration:GetFont(2)) or nil,
-		objectOverrideHintFont = (WG.Chobby and WG.Chobby.Configuration and WG.Chobby.Configuration:GetFont(2)) or nil,
+		objectOverrideFont = (WG.Chobby and WG.Chobby.Configuration and WG.Chobby.Configuration:GetFont(1)) or nil,
+		objectOverrideHintFont = (WG.Chobby and WG.Chobby.Configuration and WG.Chobby.Configuration:GetFont(1)) or nil,
 		parent = window,
 	}
 

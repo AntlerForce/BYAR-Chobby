@@ -36,7 +36,7 @@ function GetInterfaceRoot(optionsParent, mainWindowParent, fontFunction)
 	local mainButtonsWidth = 180
 	local mainButtonsWidthSmall = 140
 
-	local userStatusWidth = 500
+	local userStatusWidth = 351
 
 	local imageFudge = 0
 
