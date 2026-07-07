@@ -59,8 +59,10 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 		Log.Error("Tried to spawn duplicate login window")
 		return
 	end
+	local ww, wh = Spring.GetWindowGeometry()
 	self.emailRequired = (params and params.emailRequired) or false
-	self.windowHeight = (params and params.windowHeight) or (self.emailRequired and 460+200) or 420+200
+	local defaultWindowHeight = (params and params.windowHeight) or (self.emailRequired and 800) or 800
+	self.windowHeight = math.min(defaultWindowHeight, math.max(740, wh - 20))
 	self.loginAfterRegister = (params and params.loginAfterRegister) or false
 
 	local registerChildren = {}
@@ -557,41 +559,30 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 		x = pad + formw * 0 ,
 		y = pad + formh * 0 ,
 		width =   formw * 3 ,
-		height =  formh * 2 ,
+		height =  60 ,
 		-- caption = i18n("register_long"),
-		text = "Change user name. You must be logged in, and will be logged out on successful change.",
+		text = "Change username. You must be logged in, and will be logged out on successful change. Max: 20 characters. Cooldown: no more than twice a week, 3/month.",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
 		objectOverrideHintFont = WG.Chobby.Configuration:GetFont(1),
 	}
 	recoverChildren[#recoverChildren+1] = self.txtChangeUserName
 
-	self.lblChangeUserName =  Label:New {
-		x = pad + formw * 0 ,
-		y = pad + formh * 1 ,
-		width =   formw * 1 ,
-		height =  formh * 1 ,
-		-- caption = i18n("register_long"),
-		caption = "New user name:",
-		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
-	}
-	recoverChildren[#recoverChildren+1] = self.lblChangeUserName
-
 	self.ebChangeUserName = EditBox:New {
-		x = pad + formw * 1 ,
-		y = pad + formh * 2 ,
-		width =   formw * 1 ,
+		x = pad ,
+		y = 80 ,
+		width =   350 ,
 		height =  formh * 1 ,
 		text = Configuration.userName or Configuration.suggestedNameFromSteam or "",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
 		objectOverrideHintFont = WG.Chobby.Configuration:GetFont(1),
-		tooltip = 'User name may contain only letters, numbers, square brackets and underscores',
+		tooltip = '3-20 characters. Letters, numbers, square brackets, and underscores only.',
 	}
 	recoverChildren[#recoverChildren+1] = self.ebChangeUserName
 
 	self.btnChangeUserName = Button:New {
-		x = pad + formw * 2 ,
-		y = pad + formh * 2 ,
-		width =   formw * 1 ,
+		x = pad + 360 ,
+		y = 80 ,
+		width =   150 ,
 		height =  formh * 1 ,
 		caption = i18n("change_username"),
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -604,25 +595,36 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	}
 	recoverChildren[#recoverChildren+1] = self.btnChangeUserName
 
+	self.txtHelpChangeUserName = TextBox:New {
+		x = pad + formw * 0 ,
+		y = 105 ,
+		width =   formw * 3 + 60 ,
+		height =  formh * 1 ,
+		text = "If this doesnt work contact us on Discord.",
+		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
+		objectOverrideHintFont = WG.Chobby.Configuration:GetFont(1),
+	}
+	recoverChildren[#recoverChildren+1] = self.txtHelpChangeUserName
+
 	self.txtErrorChangeUserName = TextBox:New {
 		x = pad + formw * 0 ,
-		y = 4 + pad + formh * 3 ,
-		width =   formw * 3 ,
-		height =  formh * 1 ,
-		text = "If this doesnt work contact us on Discord",
+		y = 128 ,
+		width =   formw * 3 + 60 ,
+		height =  28 ,
+		text = "",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
 		objectOverrideHintFont = WG.Chobby.Configuration:GetFont(1),
 	}
 	recoverChildren[#recoverChildren+1] = self.txtErrorChangeUserName
 
-	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=formh * 5,right=5, height = 1}
+	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=160,right=5, height = 1}
 
 ------------------------------RESET PASSWORD----------------------------------
 	self.txtResetPassword = TextBox:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 5 ,
+		y = 168 ,
 		width =   formw * 3 ,
-		height =  formh * 1 ,
+		height =  formh * 2 ,
 		-- caption = i18n("register_long"),
 		text = "Reset forgotten password: You need to use your web browser to reset a forgotten password.",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -632,7 +634,7 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 
 	self.btnResetPassword = Button:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 7 ,
+		y = 220 ,
 		width =   formw * 3 ,
 		height =  formh * 2 ,
 		caption = "Reset your password via a browser link",
@@ -646,7 +648,7 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	}
 	recoverChildren[#recoverChildren+1] = self.btnResetPassword
 	
-	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=formh * 11,right=5, height = 1}
+	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=280,right=5, height = 1}
 --[[
 
 
@@ -745,9 +747,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 ---------------------------Change Password--------------------------------
 	self.txtChangePassword = TextBox:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 11 ,
+		y = 292 ,
 		width =   formw * 3 ,
-		height =  formh * 1 ,
+		height =  formh * 2 ,
 		-- caption = i18n("register_long"),
 		text = "Change Password: You must be logged in, enter your old and your new password",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -757,7 +759,7 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 
 	self.btnChangePassword = Button:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 13 ,
+		y = 342 ,
 		width =   formw * 3 ,
 		height =  formh * 2 ,
 		caption = "Edit your password via a browser link",
@@ -770,7 +772,7 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 		},
 	}
 	recoverChildren[#recoverChildren+1] = self.btnChangePassword
-	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=formh * 17,right=5, height = 1}
+	recoverChildren[#recoverChildren+1] = Line:New{x=5,y=410,right=5, height = 1}
 
 --[[
 	self.lblChangePasswordOld =  Label:New {
@@ -851,9 +853,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	---------------------------Change Email-------------------------------
 	self.txtChangeEmail = TextBox:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 17 ,
-		width =   formw * 3 ,
-		height =  formh * 1 ,
+		y = 420 ,
+		width =   520 ,
+		height =  82 ,
 		-- caption = i18n("register_long"),
 		text = "Change email address associated with your account. You must be logged in. Enter the new email address you wish to use, then enter the validation code sent to the new email address.",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -863,9 +865,11 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 
 	self.lblChangeEmailEmail =  Label:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 20 ,
-		width =   formw * 1 ,
+		y = 510 ,
+		width =   170 ,
 		height =  formh * 1 ,
+		autosize = false,
+		valign = "center",
 		-- caption = i18n("register_long"),
 		caption = "New email address:",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -873,9 +877,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	recoverChildren[#recoverChildren+1] = self.lblChangeEmailEmail
 
 	self.ebChangeEmailEmail = EditBox:New {
-		x = pad + formw * 1 ,
-		y = pad + formh * 20 ,
-		width =   formw * 1 ,
+		x = 190 ,
+		y = 510 ,
+		width =   210 ,
 		height =  formh * 1 ,
 		text = "",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -886,9 +890,11 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 
 	self.lblChangeEmailVerification =  Label:New {
 		x = pad + formw * 0 ,
-		y = pad + formh * 19 ,
-		width =   formw * 1 ,
+		y = 540 ,
+		width =   170 ,
 		height =  formh * 1 ,
+		autosize = false,
+		valign = "center",
 		-- caption = i18n("register_long"),
 		caption = "Verification Code:",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -896,9 +902,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	recoverChildren[#recoverChildren+1] = self.lblChangeEmailVerification
 
 	self.ebChangeEmailVerification = EditBox:New {
-		x = pad + formw * 1 ,
-		y = pad + formh * 21 ,
-		width =   formw * 1 ,
+		x = 190 ,
+		y = 540 ,
+		width =   210 ,
 		height =  formh * 1 ,
 		text = "",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -908,9 +914,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	recoverChildren[#recoverChildren+1] = self.ebChangeEmailVerification
 
 	self.btnChangeEmail = Button:New {
-		x = pad + formw * 2 ,
-		y = pad + formh * 20 ,
-		width =   formw * 1 ,
+		x = 405 ,
+		y = 510 ,
+		width =   155 ,
 		height =  formh * 1 ,
 		caption = i18n("submit_email"),
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -924,9 +930,9 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	recoverChildren[#recoverChildren+1] = self.btnChangeEmail
 
 	self.btnChangeEmailVerification = Button:New {
-		x = pad + formw * 2 ,
-		y = pad + formh * 21 ,
-		width =   formw * 1 ,
+		x = 405 ,
+		y = 540 ,
+		width =   155 ,
 		height =  formh * 1 ,
 		caption = i18n("submit_verification"),
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -941,8 +947,8 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 
 	self.txtErrorChangeEmail = TextBox:New {
 		x = pad + formw * 0 ,
-		y = 4 + pad + formh * 22 ,
-		width =   formw * 3 ,
+		y = 570 ,
+		width =   560 ,
 		height =  formh * 1 ,
 		text = "If this doesnt work contact us on Discord",
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(1),
@@ -997,11 +1003,10 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 	
 	recoverChildren[#recoverChildren+1] = self.btnTeiserver
 
-	local ww, wh = Spring.GetWindowGeometry()
-	local width = 3 * (formw  + 30) --used to be bout tree fiddy
+	local width = math.min(620, math.max(580, ww - 20))
 
 	self.window = Window:New {
-		x = math.floor((ww - width) / 2),
+		x = math.floor(math.max(0, (ww - width) / 2)),
 		y = math.floor(math.max(0,(wh - self.windowHeight) / 2)),
 		width = width,
 		height = self.windowHeight,
@@ -1070,7 +1075,8 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 		right = 5,
 		y = 30,
 		bottom = 4,
-		horizontalScrollbar = true,
+		horizontalScrollbar = false,
+		verticalScrollbar = false,
 		children = {
 			self.tabPanel,
 			self.btnCancel
@@ -1097,6 +1103,7 @@ function LoginWindow:init(failFunction, cancelText, windowClassname, params)
 end
 
 function LoginWindow:RemoveListeners()
+	self:ClearRenameListeners()
 	if self.onAgreementEnd then
 		lobby:RemoveListener("OnAgreementEnd", self.onAgreementEnd)
 		self.onAgreementEnd = nil
@@ -1116,6 +1123,22 @@ function LoginWindow:RemoveListeners()
 	-- FIXME: the rest should be removed too
 	if self.OnChangeEmailRequestDenied then
 		lobby:RemoveListener("OnChangeEmailRequestDenied", self.OnChangeEmailRequestDenied)
+	end
+end
+
+function LoginWindow:ClearRenameListeners()
+	self.pendingRenameUserName = nil
+	if self.onRenameServerMSG then
+		lobby:RemoveListener("OnServerMSG", self.onRenameServerMSG)
+		self.onRenameServerMSG = nil
+	end
+	if self.onRenameDenied then
+		lobby:RemoveListener("OnDenied", self.onRenameDenied)
+		self.onRenameDenied = nil
+	end
+	if self.onRenameDisconnected then
+		lobby:RemoveListener("OnDisconnected", self.onRenameDisconnected)
+		self.onRenameDisconnected = nil
 	end
 end
 
@@ -1341,6 +1364,7 @@ end
 
 function LoginWindow:tryChangeUserName()
 	Spring.Echo("lobby:GetConnectionStatus()",lobby:GetConnectionStatus())
+	self:ClearRenameListeners()
 	local newusername = self.ebChangeUserName.text
 	local isinValidUserName = isInValidUserName(newusername)
 	if isinValidUserName then
@@ -1348,9 +1372,59 @@ function LoginWindow:tryChangeUserName()
 		return
 	end
 	if lobby:GetConnectionStatus() == "connected" then
+		local function SetRenameButtonEnabled(enabled)
+			if self.btnChangeUserName then
+				self.btnChangeUserName:SetEnabled(enabled)
+			end
+		end
+
+		local function FinishRenameRequest(message, color)
+			self.pendingRenameUserName = nil
+			SetRenameButtonEnabled(true)
+			if self.txtErrorChangeUserName then
+				self.txtErrorChangeUserName:SetText((color or "") .. message)
+			end
+			self:ClearRenameListeners()
+		end
+
+		local function GetRenameResponseColor(message)
+			local lowerMessage = string.lower(tostring(message or ""))
+			if lowerMessage:find("success", 1, true) or lowerMessage:find("renamed", 1, true) then
+				return Configuration:GetSuccessColor()
+			end
+			if lowerMessage:find("fail", 1, true) or lowerMessage:find("denied", 1, true) or lowerMessage:find("taken", 1, true) or lowerMessage:find("already", 1, true) or lowerMessage:find("cooldown", 1, true) or lowerMessage:find("week", 1, true) or lowerMessage:find("month", 1, true) or lowerMessage:find("max", 1, true) or lowerMessage:find("too ", 1, true) then
+				return Configuration:GetErrorColor()
+			end
+			return Configuration:GetWarningColor()
+		end
+
 		WG.Analytics.SendOnetimeEvent("lobby:try_changeusername")
+		self.pendingRenameUserName = newusername
+		SetRenameButtonEnabled(false)
+		self.txtErrorChangeUserName:SetText(Configuration:GetWarningColor() .. "Sending rename request for: " .. newusername)
+
+		self.onRenameServerMSG = function(listener, message)
+			FinishRenameRequest(tostring(message or "No message"), GetRenameResponseColor(message))
+		end
+		lobby:AddListener("OnServerMSG", self.onRenameServerMSG)
+
+		self.onRenameDenied = function(listener, reason)
+			FinishRenameRequest("Rename denied: " .. tostring(reason or "No reason provided"), Configuration:GetErrorColor())
+		end
+		lobby:AddListener("OnDenied", self.onRenameDenied)
+
+		self.onRenameDisconnected = function(listener)
+			FinishRenameRequest("Disconnected after rename request. This usually means success; log in as: " .. newusername, Configuration:GetWarningColor())
+		end
+		lobby:AddListener("OnDisconnected", self.onRenameDisconnected)
+
+		WG.Delay(function()
+			if self.pendingRenameUserName == newusername then
+				FinishRenameRequest("No reply yet. Check whether you are still connected, then try again if needed.", Configuration:GetWarningColor())
+			end
+		end, 30)
+
 		lobby:RenameAccount(newusername)
-		self.txtErrorChangeUserName:SetText("You will be disconnected on success. Your new user name is: " .. newusername)
 	else
 		self.txtErrorChangeUserName:SetText(Configuration:GetErrorColor() .. "Must be logged in to change user name!")
 	end
