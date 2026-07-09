@@ -13,6 +13,35 @@ function widget:GetInfo()
 	}
 end
 
+local function capitalize(text)
+	local str = ''
+	local upperNext = true
+	local char = ''
+	for i=1, string.len(text) do
+		char = string.sub(text, i,i)
+		if upperNext then
+			str = str..string.upper(char)
+			upperNext = false
+		else
+			str = str..char
+		end
+		if char == ' ' then
+			upperNext = true
+		end
+	end
+	return str
+end
+
+local function processTrackname(trackname)
+	trackname = string.lower(trackname)
+	trackname = string.gsub(trackname, ".%w+$", "")
+	trackname = trackname:match("[^/|\\]*$")
+	trackname = string.gsub(trackname, " %(intro%)", "")
+	trackname = string.gsub(trackname, "%(intro%) ", "")
+	trackname = string.gsub(trackname, "%(intro%)", "")
+	return capitalize(trackname)
+end
+
 Spring.CreateDir("music/custom/loading")
 Spring.CreateDir("music/custom/peace")
 Spring.CreateDir("music/custom/warlow")
@@ -144,8 +173,7 @@ function widget:Update()
 	local playedTime, totalTime = Spring.GetSoundStreamTime()
 	playedTime = math.floor(playedTime)
 	totalTime = math.floor(totalTime)
-
-	if (playedTime >= totalTime) then
+	if (playedTime >= totalTime) or (playedTime < 2 and previousTrack and Spring.GetConfigInt("MusicSwitch " .. processTrackname(previousTrack), 1) == 0) then
 		local newTrack = loopTrack or GetRandomTrack(previousTrack)
 		StartTrack(newTrack)
 		previousTrack = newTrack
@@ -209,7 +237,7 @@ function playlistBuild()
 
 	-- Original Soundtrack List
 	if Spring.GetConfigInt('UseSoundtrackNew', 1) == 1 then
-		customIntroTrack = "luamenu/configs/gameConfig/byar/lobbyMusic/original/matteo dell'acqua - foobar (intro).ogg"
+		customIntroTrack = "luamenu/configs/gameConfig/byar/lobbyMusic/original/matteo dell'acqua - foobar (menu ver.) (intro).ogg"
 		randomTrackList = playlistMerge(randomTrackList, VFS.DirList(musicDirOriginal, allowedExtensions))
 	end
 
