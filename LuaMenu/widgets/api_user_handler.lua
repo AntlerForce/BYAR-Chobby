@@ -113,6 +113,8 @@ local UserLevelToImageConfFunction
 local votedUsers = {} -- 2023-06-29 FB: ToDo: Does not get reset, if user leaves battle during vote, but has no impact
 local usersAllowedToVote = {}
 
+local playerNotes
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- Globally Applicable Utilities
@@ -357,6 +359,128 @@ local function GetUserClanImage(userName, userControl)
 	return file, needDownload
 end
 
+local function TrimPlayerNote(note)
+	if type(note) ~= "string" then
+		return ""
+	end
+	return note:gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 100)
+end
+
+local function GetPlayerNoteKey(userName, userInfo)
+	userInfo = userInfo or {}
+	if userInfo.accountID ~= nil and tostring(userInfo.accountID) ~= "" then
+		return "account_" .. tostring(userInfo.accountID)
+	end
+	return "name_" .. tostring(userName or "")
+end
+
+local function CleanPlayerNotes(rawNotes)
+	local cleanNotes = {}
+	if type(rawNotes) ~= "table" then
+		return cleanNotes
+	end
+
+	for key, value in pairs(rawNotes) do
+		if type(key) == "string" and type(value) == "string" then
+			local cleanNote = TrimPlayerNote(value)
+			if cleanNote ~= "" then
+				cleanNotes[key] = cleanNote
+			end
+		end
+	end
+	return cleanNotes
+end
+
+local function SavePlayerNotes()
+	local notesFile = io.open("playerNotes.json", "w")
+	if not notesFile then
+		Spring.Echo("Unable to save player notes to playerNotes.json")
+		return
+	end
+	notesFile:write(Json.encode(playerNotes or {}))
+	notesFile:close()
+end
+
+local function LoadPlayerNotes()
+	if playerNotes then
+		return playerNotes
+	end
+
+	playerNotes = {}
+	if VFS.FileExists("playerNotes.json") then
+		local rawNotes = VFS.LoadFile("playerNotes.json")
+		if rawNotes and rawNotes ~= "" then
+			local success, decodedNotes = pcall(Json.decode, rawNotes)
+			if success then
+				playerNotes = CleanPlayerNotes(decodedNotes)
+			else
+				Spring.Echo("Unable to read player notes from playerNotes.json")
+			end
+		end
+	end
+
+	return playerNotes
+end
+
+local function GetPlayerNote(userName, userInfo)
+	local notes = LoadPlayerNotes()
+	local noteKey = GetPlayerNoteKey(userName, userInfo)
+	local note = notes[noteKey]
+	if (not note or note == "") and userInfo and userInfo.accountID ~= nil then
+		note = notes["name_" .. tostring(userName or "")]
+	end
+	if type(note) == "string" and note ~= "" then
+		return note
+	end
+end
+
+local function SetPlayerNote(userName, userInfo, note)
+	local notes = LoadPlayerNotes()
+	local cleanNote = TrimPlayerNote(note)
+	if type(note) == "string" and #(note:gsub("^%s+", ""):gsub("%s+$", "")) > 100 and WG.Chobby and WG.Chobby.InformationPopup then
+		WG.Chobby.InformationPopup("Player notes are limited to 100 characters. Your note was shortened to 100 characters.", {width = 420, height = 180})
+	end
+	local noteKey = GetPlayerNoteKey(userName, userInfo)
+	local nameNoteKey = "name_" .. tostring(userName or "")
+	if cleanNote ~= "" then
+		notes[noteKey] = cleanNote
+		if nameNoteKey ~= noteKey then
+			notes[nameNoteKey] = nil
+		end
+	else
+		notes[noteKey] = nil
+		notes[nameNoteKey] = nil
+	end
+
+	-- Client-side only: persisted to a local file and never sent through lobby.
+	SavePlayerNotes()
+end
+
+local function OpenPlayerNotesWindow(userName, userInfo)
+	if not WG.TextEntryWindow then
+		if WG.Chobby and WG.Chobby.InformationPopup then
+			WG.Chobby.InformationPopup("Text entry is not available.")
+		end
+		return
+	end
+
+	WG.TextEntryWindow.CreateTextEntryWindow({
+		defaultValue = GetPlayerNote(userName, userInfo) or "",
+		caption = "Add Player Notes",
+		labelCaption = "Local note for " .. userName .. ". 100 character limit. Leave blank to remove the note.",
+		hint = "Enter a local player note, up to 100 characters",
+		height = 260,
+		width = 520,
+		oklabel = "Save",
+		OnAccepted = function(newNote)
+			SetPlayerNote(userName, userInfo, newNote)
+		end,
+		OnOpen = function(editBox)
+			editBox:SelectAll()
+		end
+	})
+end
+
 local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamColor, showSide)
 	local Configuration = WG.Chobby.Configuration
 	local info = control.lobby:GetUser(userName) or {}
@@ -400,6 +524,7 @@ local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamCol
 	if bs.aiLib then																								comboOptions[#comboOptions + 1] = "Clone AI" end
 	if bs.aiLib and bs.owner == myUserName and isInBattle then														comboOptions[#comboOptions + 1] = "Remove" end
 	if not itsme and not info.isBot and not bs.aiLib then															comboOptions[#comboOptions + 1] = "Report User" end
+	if not (info.isBot or bs.aiLib) then																			comboOptions[#comboOptions + 1] = "Add Player Notes" end
 																													comboOptions[#comboOptions + 1] = "Copy Name"
 	if (iAmBoss or iPlay) and not (control.isSingleplayer or bs.aiLib or info.isBot) and isInBattle  then			comboOptions[#comboOptions + 1] = "\255\128\128\128" .. "--------------"
 																													comboOptions[#comboOptions + 1] =  isBoss and "Disable Boss" or "Make Boss" end
@@ -1285,6 +1410,9 @@ local function GetUserControls(userName, opts)
 						local chatWindow = WG.Chobby.interfaceRoot.OpenPrivateChat(userName)
 					elseif selectedName == "Copy Name" then
 						Spring.SetClipboard(userName)
+					elseif selectedName == "Add Player Notes" then
+						local latestUserInfo = userControls.lobby:GetUser(userName) or userInfo or {}
+						OpenPlayerNotesWindow(userName, latestUserInfo)
 					elseif selectedName == "Kickban" then
 						local function YesFunc()
 							lobby:SayBattle("!kickban "..userName)
@@ -2004,7 +2132,9 @@ end
 local userHandler = {
 	CountryShortnameToFlag = CountryShortnameToFlag,
 	GetUserRankImage = GetUserRankImage,
-	GetClanImage = GetClanImage
+	GetClanImage = GetClanImage,
+	GetPlayerNote = GetPlayerNote,
+	SetPlayerNote = SetPlayerNote
 }
 
 function userHandler.SetTooltipBattle(battle)
