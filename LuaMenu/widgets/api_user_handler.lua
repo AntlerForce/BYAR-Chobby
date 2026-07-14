@@ -114,6 +114,7 @@ local votedUsers = {} -- 2023-06-29 FB: ToDo: Does not get reset, if user leaves
 local usersAllowedToVote = {}
 
 local playerNotes
+local UpdateUserActivity
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -434,7 +435,22 @@ local function GetPlayerNote(userName, userInfo)
 	end
 end
 
+local function GetPlayerNoteUserInfo(userName, userControls)
+	return userControls.replayUserInfo or (userControls.lobby and userControls.lobby:GetUser(userName)) or {}
+end
+
+local function GetPlayerDisplayName(userName, userControls)
+	if GetPlayerNote(userName, GetPlayerNoteUserInfo(userName, userControls)) then
+		return userName .. "*"
+	end
+	return userName
+end
+
 local function SetPlayerNote(userName, userInfo, note)
+	if lobby and lobby.GetMyUserName and userName == lobby:GetMyUserName() then
+		return
+	end
+
 	local notes = LoadPlayerNotes()
 	local cleanNote = TrimPlayerNote(note)
 	if type(note) == "string" and #(note:gsub("^%s+", ""):gsub("%s+$", "")) > 100 and WG.Chobby and WG.Chobby.InformationPopup then
@@ -454,6 +470,9 @@ local function SetPlayerNote(userName, userInfo, note)
 
 	-- Client-side only: persisted to a local file and never sent through lobby.
 	SavePlayerNotes()
+	if UpdateUserActivity then
+		UpdateUserActivity(_, userName, {})
+	end
 end
 
 local function OpenPlayerNotesWindow(userName, userInfo)
@@ -524,7 +543,7 @@ local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamCol
 	if bs.aiLib then																								comboOptions[#comboOptions + 1] = "Clone AI" end
 	if bs.aiLib and bs.owner == myUserName and isInBattle then														comboOptions[#comboOptions + 1] = "Remove" end
 	if not itsme and not info.isBot and not bs.aiLib then															comboOptions[#comboOptions + 1] = "Report User" end
-	if not (info.isBot or bs.aiLib) then																			comboOptions[#comboOptions + 1] = "Add Player Notes" end
+	if not (itsme or info.isBot or bs.aiLib) then																comboOptions[#comboOptions + 1] = "Add Player Notes" end
 																													comboOptions[#comboOptions + 1] = "Copy Name"
 	if (iAmBoss or iPlay) and not (control.isSingleplayer or bs.aiLib or info.isBot) and isInBattle  then			comboOptions[#comboOptions + 1] = "\255\128\128\128" .. "--------------"
 																													comboOptions[#comboOptions + 1] =  isBoss and "Disable Boss" or "Make Boss" end
@@ -751,6 +770,25 @@ local function UpdateUserStatusImage(userName, userControls)
 	end
 end
 
+local function UpdateUserDisplayName(userName, userControls)
+	if not userControls.tbName then
+		return
+	end
+
+	local displayName = GetPlayerDisplayName(userName, userControls)
+	local maxWidth = userControls.maxNameLength and (userControls.maxNameLength - (userControls.nameStartY or 0))
+	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, maxWidth)
+
+	if truncatedName then
+		userControls.tbName:SetText(truncatedName)
+		userControls.nameTruncated = true
+	else
+		userControls.tbName:SetText(displayName)
+		userControls.nameTruncated = false
+	end
+	userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
+end
+
 local function UpdateUserControlStatus(userName, userControls)
 	if userControls.hideStatus then
 		return
@@ -759,6 +797,7 @@ local function UpdateUserControlStatus(userName, userControls)
 		local imgFile, status, font = GetUserStatusFont(userName, isInBattle, userControls)
 		userControls.tbName.font = font
 		userControls.tbName:Invalidate()
+		UpdateUserDisplayName(userName, userControls)
 		userControls.imStatusLarge.file = imgFile
 		userControls.imStatusLarge:Invalidate()
 		userControls.lblStatusLarge.font = font
@@ -783,14 +822,15 @@ local function UpdateUserControlStatus(userName, userControls)
 			statusImageOffset = userControls.maxNameLength - 21*(#imageFiles)
 		end
 
+		local displayName = GetPlayerDisplayName(userName, userControls)
 		local nameSpace = userControls.maxNameLength - userControls.nameStartY - (userControls.maxNameLength - statusImageOffset)
-		local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, nameSpace)
+		local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, nameSpace)
 
 		if truncatedName then
 			userControls.tbName:SetText(truncatedName)
 			userControls.nameTruncated = true
-		elseif userControls.nameTruncated then
-			userControls.tbName:SetText(userName)
+		else
+			userControls.tbName:SetText(displayName)
 			userControls.nameTruncated = false
 		end
 	end
@@ -867,6 +907,7 @@ local function UpdateUserActivitySingleList(userList, userName, status)
 
 		userControls.tbName.font = GetUserNameColorFont(userName, userControls)
 		userControls.tbName:Invalidate()
+		UpdateUserDisplayName(userName, userControls)
 
 		UpdateUserStatusImage(userName, userControls)
 		UpdateUserControlStatus(userName, userControls)
@@ -914,7 +955,7 @@ local function UpdateUserActivitySingleList(userList, userName, status)
 	end
 end
 
-local function UpdateUserActivity(listener, userName, status)
+UpdateUserActivity = function(listener, userName, status)
 	if not ChobbyReady() then
 		return
 	end
@@ -1171,7 +1212,8 @@ local function UpdateUserBattleStatus(listener, userName, battleStatusDiff)
 				offset = offset + 2
 				userControls.tbName:SetPos(offset)
 				userControls.nameStartY = offset
-				local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, userControls.maxNameLength and (userControls.maxNameLength - offset))
+				local displayName = GetPlayerDisplayName(userName, userControls)
+				local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, userControls.maxNameLength and (userControls.maxNameLength - offset))
 				userControls.nameStartY = offset
 				
 				userControls.tbName.font = GetUserNameColorFont(userName, userControls)
@@ -1179,6 +1221,9 @@ local function UpdateUserBattleStatus(listener, userName, battleStatusDiff)
 				if truncatedName then
 					userControls.tbName:SetText(truncatedName)
 					userControls.nameTruncated = true
+				else
+					userControls.tbName:SetText(displayName)
+					userControls.nameTruncated = false
 				end
 				userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
 				offset = offset + userControls.nameActualLength
@@ -1920,7 +1965,8 @@ local function GetUserControls(userName, opts)
 		text = userName,
 	}
 
-	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, maxNameLength and (maxNameLength - offset))
+	local displayName = GetPlayerDisplayName(userName, userControls)
+	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, maxNameLength and (maxNameLength - offset))
 	userControls.nameStartY = offset
 	userControls.maxNameLength = maxNameLength
 
@@ -1930,6 +1976,8 @@ local function GetUserControls(userName, opts)
 	if truncatedName then
 		userControls.tbName:SetText(truncatedName)
 		userControls.nameTruncated = true
+	else
+		userControls.tbName:SetText(displayName)
 	end
 	userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
 	offset = offset + userControls.nameActualLength
@@ -2039,7 +2087,7 @@ local function GetUserControls(userName, opts)
 		userControls.mainControl.OnResize[#userControls.mainControl.OnResize + 1] = function (obj, sizeX, sizeY)
 			local maxWidth = sizeX - userControls.nameStartY - 40
 			
-			local truncatedName = StringUtilities.GetTruncatedStringWithDotDot(userName, userControls.tbName.font, maxWidth)
+			local truncatedName = StringUtilities.GetTruncatedStringWithDotDot(GetPlayerDisplayName(userName, userControls), userControls.tbName.font, maxWidth)
 			userControls.tbName:SetText(truncatedName)
 
 			offset = userControls.nameStartY + userControls.tbName.font:GetTextWidth(userControls.tbName.text) + 3
