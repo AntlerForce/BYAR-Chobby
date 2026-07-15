@@ -95,7 +95,7 @@ local IMAGE_BOSS           = IMAGE_DIR .. "boss-icon.png"
 local IMAGE_RUNNING_BATTLE = IMAGE_DIR .. "runningBattle.png"
 local IMAGE_MUTED          = IMAGE_DIR .. "mute.png"
 
-local DEFAULT_SNAPSHOT_PATH = "data-processing-main/data-processing-main/data_export/player_skill_snapshot.csv"
+local DEFAULT_SNAPSHOT_PATH = "data-processing-main/data_export/player_skill_snapshot.csv"
 
 local openSkillCache = nil
 local openSkillLoaded = false
@@ -112,6 +112,9 @@ local UserLevelToImageConfFunction
 
 local votedUsers = {} -- 2023-06-29 FB: ToDo: Does not get reset, if user leaves battle during vote, but has no impact
 local usersAllowedToVote = {}
+
+local playerNotes
+local UpdateUserActivity
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -357,6 +360,145 @@ local function GetUserClanImage(userName, userControl)
 	return file, needDownload
 end
 
+local function TrimPlayerNote(note)
+	if type(note) ~= "string" then
+		return ""
+	end
+	return note:gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 100)
+end
+
+local function GetPlayerNoteKey(userName, userInfo)
+	userInfo = userInfo or {}
+	if userInfo.accountID ~= nil and tostring(userInfo.accountID) ~= "" then
+		return "account_" .. tostring(userInfo.accountID)
+	end
+	return "name_" .. tostring(userName or "")
+end
+
+local function CleanPlayerNotes(rawNotes)
+	local cleanNotes = {}
+	if type(rawNotes) ~= "table" then
+		return cleanNotes
+	end
+
+	for key, value in pairs(rawNotes) do
+		if type(key) == "string" and type(value) == "string" then
+			local cleanNote = TrimPlayerNote(value)
+			if cleanNote ~= "" then
+				cleanNotes[key] = cleanNote
+			end
+		end
+	end
+	return cleanNotes
+end
+
+local function SavePlayerNotes()
+	local notesFile = io.open("playerNotes.json", "w")
+	if not notesFile then
+		Spring.Echo("Unable to save player notes to playerNotes.json")
+		return
+	end
+	notesFile:write(Json.encode(playerNotes or {}))
+	notesFile:close()
+end
+
+local function LoadPlayerNotes()
+	if playerNotes then
+		return playerNotes
+	end
+
+	playerNotes = {}
+	if VFS.FileExists("playerNotes.json") then
+		local rawNotes = VFS.LoadFile("playerNotes.json")
+		if rawNotes and rawNotes ~= "" then
+			local success, decodedNotes = pcall(Json.decode, rawNotes)
+			if success then
+				playerNotes = CleanPlayerNotes(decodedNotes)
+			else
+				Spring.Echo("Unable to read player notes from playerNotes.json")
+			end
+		end
+	end
+
+	return playerNotes
+end
+
+local function GetPlayerNote(userName, userInfo)
+	local notes = LoadPlayerNotes()
+	local noteKey = GetPlayerNoteKey(userName, userInfo)
+	local note = notes[noteKey]
+	if (not note or note == "") and userInfo and userInfo.accountID ~= nil then
+		note = notes["name_" .. tostring(userName or "")]
+	end
+	if type(note) == "string" and note ~= "" then
+		return note
+	end
+end
+
+local function GetPlayerNoteUserInfo(userName, userControls)
+	return userControls.replayUserInfo or (userControls.lobby and userControls.lobby:GetUser(userName)) or {}
+end
+
+local function GetPlayerDisplayName(userName, userControls)
+	if userControls.lobby and userControls.lobby.GetMyUserName and userName == userControls.lobby:GetMyUserName() then
+		return userName
+	end
+	if GetPlayerNote(userName, GetPlayerNoteUserInfo(userName, userControls)) then
+		return userName .. "*"
+	end
+	return userName
+end
+
+local function SetPlayerNote(userName, userInfo, note)
+	local notes = LoadPlayerNotes()
+	local cleanNote = TrimPlayerNote(note)
+	if type(note) == "string" and #(note:gsub("^%s+", ""):gsub("%s+$", "")) > 100 and WG.Chobby and WG.Chobby.InformationPopup then
+		WG.Chobby.InformationPopup("Player notes are limited to 100 characters. Your note was shortened to 100 characters.", {width = 420, height = 180})
+	end
+	local noteKey = GetPlayerNoteKey(userName, userInfo)
+	local nameNoteKey = "name_" .. tostring(userName or "")
+	if cleanNote ~= "" then
+		notes[noteKey] = cleanNote
+		if nameNoteKey ~= noteKey then
+			notes[nameNoteKey] = nil
+		end
+	else
+		notes[noteKey] = nil
+		notes[nameNoteKey] = nil
+	end
+
+	-- Client-side only: persisted to a local file and never sent through lobby.
+	SavePlayerNotes()
+	if UpdateUserActivity then
+		UpdateUserActivity(_, userName, {})
+	end
+end
+
+local function OpenPlayerNotesWindow(userName, userInfo)
+	if not WG.TextEntryWindow then
+		if WG.Chobby and WG.Chobby.InformationPopup then
+			WG.Chobby.InformationPopup("Text entry is not available.")
+		end
+		return
+	end
+
+	WG.TextEntryWindow.CreateTextEntryWindow({
+		defaultValue = GetPlayerNote(userName, userInfo) or "",
+		caption = "Add Player Notes",
+		labelCaption = "Local note for " .. userName .. ". 100 character limit. Leave blank to remove the note.",
+		hint = "Enter a local player note, up to 100 characters",
+		height = 260,
+		width = 520,
+		oklabel = "Save",
+		OnAccepted = function(newNote)
+			SetPlayerNote(userName, userInfo, newNote)
+		end,
+		OnOpen = function(editBox)
+			editBox:SelectAll()
+		end
+	})
+end
+
 local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamColor, showSide)
 	local Configuration = WG.Chobby.Configuration
 	local info = control.lobby:GetUser(userName) or {}
@@ -400,6 +542,7 @@ local function GetUserComboBoxOptions(userName, isInBattle, control, showTeamCol
 	if bs.aiLib then																								comboOptions[#comboOptions + 1] = "Clone AI" end
 	if bs.aiLib and bs.owner == myUserName and isInBattle then														comboOptions[#comboOptions + 1] = "Remove" end
 	if not itsme and not info.isBot and not bs.aiLib then															comboOptions[#comboOptions + 1] = "Report User" end
+	if not (info.isBot or bs.aiLib) then																			comboOptions[#comboOptions + 1] = "Add Player Notes" end
 																													comboOptions[#comboOptions + 1] = "Copy Name"
 	if (iAmBoss or iPlay) and not (control.isSingleplayer or bs.aiLib or info.isBot) and isInBattle  then			comboOptions[#comboOptions + 1] = "\255\128\128\128" .. "--------------"
 																													comboOptions[#comboOptions + 1] =  isBoss and "Disable Boss" or "Make Boss" end
@@ -626,6 +769,25 @@ local function UpdateUserStatusImage(userName, userControls)
 	end
 end
 
+local function UpdateUserDisplayName(userName, userControls)
+	if not userControls.tbName then
+		return
+	end
+
+	local displayName = GetPlayerDisplayName(userName, userControls)
+	local maxWidth = userControls.maxNameLength and (userControls.maxNameLength - (userControls.nameStartY or 0))
+	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, maxWidth)
+
+	if truncatedName then
+		userControls.tbName:SetText(truncatedName)
+		userControls.nameTruncated = true
+	else
+		userControls.tbName:SetText(displayName)
+		userControls.nameTruncated = false
+	end
+	userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
+end
+
 local function UpdateUserControlStatus(userName, userControls)
 	if userControls.hideStatus then
 		return
@@ -634,6 +796,7 @@ local function UpdateUserControlStatus(userName, userControls)
 		local imgFile, status, font = GetUserStatusFont(userName, isInBattle, userControls)
 		userControls.tbName.font = font
 		userControls.tbName:Invalidate()
+		UpdateUserDisplayName(userName, userControls)
 		userControls.imStatusLarge.file = imgFile
 		userControls.imStatusLarge:Invalidate()
 		userControls.lblStatusLarge.font = font
@@ -658,14 +821,15 @@ local function UpdateUserControlStatus(userName, userControls)
 			statusImageOffset = userControls.maxNameLength - 21*(#imageFiles)
 		end
 
+		local displayName = GetPlayerDisplayName(userName, userControls)
 		local nameSpace = userControls.maxNameLength - userControls.nameStartY - (userControls.maxNameLength - statusImageOffset)
-		local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, nameSpace)
+		local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, nameSpace)
 
 		if truncatedName then
 			userControls.tbName:SetText(truncatedName)
 			userControls.nameTruncated = true
-		elseif userControls.nameTruncated then
-			userControls.tbName:SetText(userName)
+		else
+			userControls.tbName:SetText(displayName)
 			userControls.nameTruncated = false
 		end
 	end
@@ -742,6 +906,7 @@ local function UpdateUserActivitySingleList(userList, userName, status)
 
 		userControls.tbName.font = GetUserNameColorFont(userName, userControls)
 		userControls.tbName:Invalidate()
+		UpdateUserDisplayName(userName, userControls)
 
 		UpdateUserStatusImage(userName, userControls)
 		UpdateUserControlStatus(userName, userControls)
@@ -789,7 +954,7 @@ local function UpdateUserActivitySingleList(userList, userName, status)
 	end
 end
 
-local function UpdateUserActivity(listener, userName, status)
+UpdateUserActivity = function(listener, userName, status)
 	if not ChobbyReady() then
 		return
 	end
@@ -1046,7 +1211,8 @@ local function UpdateUserBattleStatus(listener, userName, battleStatusDiff)
 				offset = offset + 2
 				userControls.tbName:SetPos(offset)
 				userControls.nameStartY = offset
-				local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, userControls.maxNameLength and (userControls.maxNameLength - offset))
+				local displayName = GetPlayerDisplayName(userName, userControls)
+				local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, userControls.maxNameLength and (userControls.maxNameLength - offset))
 				userControls.nameStartY = offset
 				
 				userControls.tbName.font = GetUserNameColorFont(userName, userControls)
@@ -1054,6 +1220,9 @@ local function UpdateUserBattleStatus(listener, userName, battleStatusDiff)
 				if truncatedName then
 					userControls.tbName:SetText(truncatedName)
 					userControls.nameTruncated = true
+				else
+					userControls.tbName:SetText(displayName)
+					userControls.nameTruncated = false
 				end
 				userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
 				offset = offset + userControls.nameActualLength
@@ -1285,6 +1454,9 @@ local function GetUserControls(userName, opts)
 						local chatWindow = WG.Chobby.interfaceRoot.OpenPrivateChat(userName)
 					elseif selectedName == "Copy Name" then
 						Spring.SetClipboard(userName)
+					elseif selectedName == "Add Player Notes" then
+						local latestUserInfo = userControls.lobby:GetUser(userName) or userInfo or {}
+						OpenPlayerNotesWindow(userName, latestUserInfo)
 					elseif selectedName == "Kickban" then
 						local function YesFunc()
 							lobby:SayBattle("!kickban "..userName)
@@ -1792,7 +1964,8 @@ local function GetUserControls(userName, opts)
 		text = userName,
 	}
 
-	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(userName, userControls.tbName.font, maxNameLength and (maxNameLength - offset))
+	local displayName = GetPlayerDisplayName(userName, userControls)
+	local truncatedName = StringUtilities.TruncateStringIfRequiredAndDotDot(displayName, userControls.tbName.font, maxNameLength and (maxNameLength - offset))
 	userControls.nameStartY = offset
 	userControls.maxNameLength = maxNameLength
 
@@ -1802,6 +1975,8 @@ local function GetUserControls(userName, opts)
 	if truncatedName then
 		userControls.tbName:SetText(truncatedName)
 		userControls.nameTruncated = true
+	else
+		userControls.tbName:SetText(displayName)
 	end
 	userControls.nameActualLength = userControls.tbName.font:GetTextWidth(userControls.tbName.text)
 	offset = offset + userControls.nameActualLength
@@ -1911,7 +2086,7 @@ local function GetUserControls(userName, opts)
 		userControls.mainControl.OnResize[#userControls.mainControl.OnResize + 1] = function (obj, sizeX, sizeY)
 			local maxWidth = sizeX - userControls.nameStartY - 40
 			
-			local truncatedName = StringUtilities.GetTruncatedStringWithDotDot(userName, userControls.tbName.font, maxWidth)
+			local truncatedName = StringUtilities.GetTruncatedStringWithDotDot(GetPlayerDisplayName(userName, userControls), userControls.tbName.font, maxWidth)
 			userControls.tbName:SetText(truncatedName)
 
 			offset = userControls.nameStartY + userControls.tbName.font:GetTextWidth(userControls.tbName.text) + 3
@@ -2004,7 +2179,9 @@ end
 local userHandler = {
 	CountryShortnameToFlag = CountryShortnameToFlag,
 	GetUserRankImage = GetUserRankImage,
-	GetClanImage = GetClanImage
+	GetClanImage = GetClanImage,
+	GetPlayerNote = GetPlayerNote,
+	SetPlayerNote = SetPlayerNote
 }
 
 function userHandler.SetTooltipBattle(battle)

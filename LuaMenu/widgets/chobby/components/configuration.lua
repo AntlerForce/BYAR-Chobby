@@ -181,6 +181,7 @@ function Configuration:init()
 	self.useLastGameSpectatorState = 1 --1: Remember Last 2: Always Spectator 3: Always Player
 
 	self.loadLocalWidgets = false
+	self.autoUpdateWidgets = true
 	self.displayBots = false
 	self.filterbattleroom = true
 	self.displayBadEngines2 = false
@@ -220,6 +221,7 @@ function Configuration:init()
 	self.confirmation_battleFromBattle = false
 	self.leaveMultiplayerOnMainMenu = false
 	self.queueExitConfirmPromptDoNotAskAgain = false
+	self.pluginsInstallDisclaimerAccepted = false
 	self.backConfirmation = {
 		multiplayer = {
 			self.leaveMultiplayerOnMainMenu and {
@@ -753,6 +755,7 @@ function Configuration:GetConfigData()
 		lobbyIdleSleep = self.lobbyIdleSleep,
 		rememberQueuesOnStart = self.rememberQueuesOnStart,
 		loadLocalWidgets = self.loadLocalWidgets,
+		autoUpdateWidgets = self.autoUpdateWidgets,
 		activeDebugConsole = self.activeDebugConsole,
 		onlyShowFeaturedMaps = self.onlyShowFeaturedMaps,
 		simpleAiList = self.simpleAiList,
@@ -798,6 +801,7 @@ function Configuration:GetConfigData()
 		useLastGameSpectatorState = self.useLastGameSpectatorState,
 		friendsFilterOnline = self.friendsFilterOnline,
 		queueExitConfirmPromptDoNotAskAgain = self.queueExitConfirmPromptDoNotAskAgain,
+		pluginsInstallDisclaimerAccepted = self.pluginsInstallDisclaimerAccepted,
 		supperAnnouncementKey = self.supperAnnouncementKey,
 		rejoinBattleID = self.rejoinBattleID
 	}
