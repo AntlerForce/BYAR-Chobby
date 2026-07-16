@@ -179,10 +179,10 @@ end
 
 function EmojiTextBox:Tokenize(text, allowEmoji)
 	local tokens = {}
-	if (allowEmoji == false) or not (ChatEmojis and ChatEmojis.HasEmojiCandidate and ChatEmojis.HasEmojiCandidate(text)) then
-		self:AppendTextTokens(tokens, text, 1, "")
-		return tokens
-	end
+	local emojiEnabled = (allowEmoji ~= false)
+		and ChatEmojis
+		and ChatEmojis.HasEmojiCandidate
+		and ChatEmojis.HasEmojiCandidate(text)
 
 	local pos = 1
 	local textLen = #text
@@ -193,7 +193,7 @@ function EmojiTextBox:Tokenize(text, allowEmoji)
 		if byte == 255 and pos + 3 <= textLen then
 			colorPrefix = string.sub(text, pos, pos + 3)
 			pos = pos + 4
-		elseif byte == 58 then
+		elseif emojiEnabled and byte == 58 then
 			local aliasEnd = string.find(text, ":", pos + 1, true)
 			local alias = aliasEnd and string.sub(text, pos + 1, aliasEnd - 1)
 			if IsAliasName(alias) and ChatEmojis and ChatEmojis.IsAliasRenderable and ChatEmojis.IsAliasRenderable(alias) then
@@ -207,7 +207,7 @@ function EmojiTextBox:Tokenize(text, allowEmoji)
 			local runStart = pos
 			while pos <= textLen do
 				local b = string.byte(text, pos)
-				if b == 255 or b == 58 then
+				if b == 255 or (emojiEnabled and b == 58) then
 					break
 				end
 				pos = pos + 1
