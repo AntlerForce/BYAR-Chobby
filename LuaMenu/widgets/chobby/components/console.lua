@@ -478,12 +478,13 @@ function Console:AddMessage(message, userName, dateOverride, color, thirdPerson,
 
 	txt = txt .. message
 	onTextClick, textTooltip = WG.BrowserHandler.AddClickableUrls(txt, onTextClick or {}, textTooltip or {})
+	local allowEmoji = (userName ~= nil)
 
 	whiteText = whiteText .. message
 	if self.tbHistory.text == "" then
-		self.tbHistory:SetText(txt, textTooltip, onTextClick)
+		self.tbHistory:SetText(txt, textTooltip, onTextClick, allowEmoji)
 	else
-		self.tbHistory:AddLine(txt, textTooltip, onTextClick)
+		self.tbHistory:AddLine(txt, textTooltip, onTextClick, allowEmoji)
 	end
 
 	if self.channelName then

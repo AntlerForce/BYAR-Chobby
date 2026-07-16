@@ -49,12 +49,67 @@ for alias in pairs(ChatEmojis.aliases) do
 end
 table.sort(ChatEmojis.sortedAliases)
 
-function ChatEmojis.GetImageFile(alias)
-	local data = ChatEmojis.aliasData[alias]
-	if not (data and data.image) then
-		return
+ChatEmojis._aliasImagePath = {}
+ChatEmojis._unicodeStartChars = {}
+ChatEmojis._unicodeStartSet = {}
+ChatEmojis._candidateCache = {}
+ChatEmojis._candidateCacheCount = 0
+ChatEmojis._candidateCacheMax = 4096
+
+for alias, data in pairs(ChatEmojis.aliasData) do
+	if data and data.image then
+		ChatEmojis._aliasImagePath[alias] = (data.custom and ChatEmojis.customImageDir or ChatEmojis.imageDir) .. data.image
 	end
-	return (data.custom and ChatEmojis.customImageDir or ChatEmojis.imageDir) .. data.image
+	if data and data.unicode then
+		local firstByte = string.byte(data.unicode, 1)
+		if firstByte and not ChatEmojis._unicodeStartSet[firstByte] then
+			ChatEmojis._unicodeStartSet[firstByte] = true
+			ChatEmojis._unicodeStartChars[#ChatEmojis._unicodeStartChars + 1] = string.char(firstByte)
+		end
+	end
+end
+
+function ChatEmojis.HasEmojiCandidate(text)
+	if type(text) ~= "string" or text == "" then
+		return false
+	end
+
+	local cached = ChatEmojis._candidateCache[text]
+	if cached ~= nil then
+		return cached
+	end
+
+	local hasEmoji = false
+	local firstColon = string.find(text, ":", 1, true)
+	if firstColon and string.find(text, ":", firstColon + 1, true) then
+		hasEmoji = true
+	else
+		for i = 1, #ChatEmojis._unicodeStartChars do
+			if string.find(text, ChatEmojis._unicodeStartChars[i], 1, true) then
+				hasEmoji = true
+				break
+			end
+		end
+	end
+
+	if ChatEmojis._candidateCache[text] == nil then
+		ChatEmojis._candidateCacheCount = ChatEmojis._candidateCacheCount + 1
+		if ChatEmojis._candidateCacheCount > ChatEmojis._candidateCacheMax then
+			ChatEmojis._candidateCache = {}
+			ChatEmojis._candidateCacheCount = 1
+		end
+	end
+	ChatEmojis._candidateCache[text] = hasEmoji
+
+	return hasEmoji
+end
+
+function ChatEmojis.IsAliasRenderable(alias)
+	return type(alias) == "string" and ChatEmojis._aliasImagePath[alias] ~= nil
+end
+
+function ChatEmojis.GetImageFile(alias)
+	return ChatEmojis._aliasImagePath[alias]
 end
 
 function ChatEmojis.GetDisplayEntries()

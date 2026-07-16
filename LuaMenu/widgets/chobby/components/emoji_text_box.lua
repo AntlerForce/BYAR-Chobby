@@ -177,8 +177,13 @@ function EmojiTextBox:BuildDrawRuns(tokens)
 	return runs
 end
 
-function EmojiTextBox:Tokenize(text)
+function EmojiTextBox:Tokenize(text, allowEmoji)
 	local tokens = {}
+	if (allowEmoji == false) or not (ChatEmojis and ChatEmojis.HasEmojiCandidate and ChatEmojis.HasEmojiCandidate(text)) then
+		self:AppendTextTokens(tokens, text, 1, "")
+		return tokens
+	end
+
 	local pos = 1
 	local textLen = #text
 	local colorPrefix = ""
@@ -191,7 +196,7 @@ function EmojiTextBox:Tokenize(text)
 		elseif byte == 58 then
 			local aliasEnd = string.find(text, ":", pos + 1, true)
 			local alias = aliasEnd and string.sub(text, pos + 1, aliasEnd - 1)
-			if IsAliasName(alias) and ChatEmojis and ChatEmojis.GetImageFile and ChatEmojis.GetImageFile(alias) then
+			if IsAliasName(alias) and ChatEmojis and ChatEmojis.IsAliasRenderable and ChatEmojis.IsAliasRenderable(alias) then
 				tokens[#tokens + 1] = self:CreateEmojiToken(alias, pos, aliasEnd)
 				pos = aliasEnd + 1
 			else
@@ -291,7 +296,7 @@ end
 
 function EmojiTextBox:GeneratePhysicalLines(lineID)
 	local logicalLine = self.lines[lineID]
-	local tokens = self:Tokenize(logicalLine.text)
+	local tokens = self:Tokenize(logicalLine.text, logicalLine.allowEmoji)
 	local padding = self.padding
 	local maxWidth = math.max(1, self.width - padding[1] - padding[3])
 	local currentTokens = {}
@@ -341,7 +346,7 @@ function EmojiTextBox:UpdateLayout()
 	return true
 end
 
-function EmojiTextBox:SetText(newtext, tooltips, OnTextClick)
+function EmojiTextBox:SetText(newtext, tooltips, OnTextClick, allowEmoji)
 	newtext = newtext or ""
 	self.text = newtext
 	self.lines = {}
@@ -350,12 +355,13 @@ function EmojiTextBox:SetText(newtext, tooltips, OnTextClick)
 			text = line,
 			tooltips = tooltips,
 			OnTextClick = OnTextClick,
+			allowEmoji = (allowEmoji ~= false),
 		}
 	end
 	self:UpdateLayout()
 end
 
-function EmojiTextBox:AddLine(text, tooltips, OnTextClick)
+function EmojiTextBox:AddLine(text, tooltips, OnTextClick, allowEmoji)
 	if self.agressiveMaxLines and #self.lines > self.agressiveMaxLines then
 		local preserve = {}
 		for i = math.max(1, #self.lines - self.agressiveMaxLinesPreserve), #self.lines do
@@ -373,6 +379,7 @@ function EmojiTextBox:AddLine(text, tooltips, OnTextClick)
 		text = text or "",
 		tooltips = tooltips,
 		OnTextClick = OnTextClick,
+		allowEmoji = (allowEmoji ~= false),
 	}
 	self.text = self.text == "" and (text or "") or (self.text .. "\n" .. (text or ""))
 	self:UpdateLayout()
