@@ -12,6 +12,7 @@ EmojiTextBox = Control:Inherit{
 	noFont = false,
 	emojiScale = 0.95,
 	emojiLinePadding = 2,
+	emojiInlinePadding = 2,
 	lines = {},
 	physicalLines = {},
 }
@@ -85,7 +86,11 @@ end
 function EmojiTextBox:GetEmojiYOffset(size)
 	local fontHeight = self.font and self.font.GetAscenderHeight and math.ceil(self.font:GetAscenderHeight()) or nil
 	fontHeight = fontHeight or (self.font and self.font.GetLineHeight and math.ceil(self.font:GetLineHeight())) or self:GetLineHeight()
-	return math.max(0, math.floor((fontHeight - size) * 0.5))
+	return math.floor((fontHeight - size) * 0.5)
+end
+
+function EmojiTextBox:GetEmojiInlinePadding(size)
+	return math.max(1, self.emojiInlinePadding or math.floor(size * 0.08))
 end
 
 function EmojiTextBox:GetTextWidth(text)
@@ -107,6 +112,8 @@ function EmojiTextBox:CreateTextToken(text, startIndex, endIndex, colorPrefix)
 end
 
 function EmojiTextBox:CreateEmojiToken(alias, startIndex, endIndex)
+	local size = self:GetEmojiSize()
+	local padding = self:GetEmojiInlinePadding(size)
 	return {
 		type = "emoji",
 		alias = alias,
@@ -114,7 +121,7 @@ function EmojiTextBox:CreateEmojiToken(alias, startIndex, endIndex)
 		endIndex = endIndex,
 		image = ChatEmojis and ChatEmojis.GetImageFile and ChatEmojis.GetImageFile(alias),
 		fallback = ChatEmojis and ChatEmojis.aliases and ChatEmojis.aliases[alias],
-		width = self:GetEmojiSize() + 2,
+		width = size + (padding * 2),
 	}
 end
 
@@ -411,20 +418,21 @@ end
 
 function EmojiTextBox:DrawEmoji(token, x, y)
 	local size = self:GetEmojiSize()
+	local padding = self:GetEmojiInlinePadding(size)
 	local emojiY = y + self:GetEmojiYOffset(size)
 	local textureHandler = GetTextureHandler()
 	if token.image and textureHandler and textureHandler.LoadTexture then
 		gl.Color(1, 1, 1, 1)
 		local loaded = pcall(textureHandler.LoadTexture, 0, token.image, self)
 		if loaded then
-			gl.TexRect(x, emojiY, x + size, emojiY + size, false, true)
+			gl.TexRect(x + padding, emojiY, x + padding + size, emojiY + size, false, true)
 			gl.Texture(0, false)
 			return
 		end
 		gl.Texture(0, false)
 	end
 	if token.fallback then
-		self.font:Draw(token.fallback, x, y)
+		self.font:Draw(token.fallback, x + padding, y)
 	end
 end
 
