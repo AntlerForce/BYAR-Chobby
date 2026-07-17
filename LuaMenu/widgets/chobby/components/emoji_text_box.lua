@@ -453,10 +453,19 @@ function EmojiTextBox:DrawControl()
 	end
 end
 
-function EmojiTextBox:GetCursorByMousePos(x, y)
+function EmojiTextBox:NormalizeLocalMousePos(x, y)
+	if x == nil or y == nil then
+		return 0, 0
+	end
+	if x >= 0 and y >= 0 and x <= self.width and y <= self.height then
+		return x, y
+	end
 	local clientX, clientY = self.clientArea[1], self.clientArea[2]
-	local localX = x - clientX
-	local localY = y - clientY
+	return x - clientX, y - clientY
+end
+
+function EmojiTextBox:GetCursorByMousePos(x, y)
+	local localX, localY = self:NormalizeLocalMousePos(x, y)
 	local lineHeight = self:GetLineHeight()
 	local physicalLineID = math.min(#self.physicalLines, math.max(1, math.floor(localY / lineHeight) + 1))
 	local physicalLine = self.physicalLines[physicalLineID]
@@ -504,14 +513,16 @@ function EmojiTextBox:MouseDown(x, y, ...)
 			end
 		end
 	end
-	return inherited.MouseDown(self, x, y, ...) or self
+	local localX, localY = self:NormalizeLocalMousePos(x, y)
+	return inherited.MouseDown(self, localX, localY, ...)
 end
 
 function EmojiTextBox:MouseMove(x, y, dx, dy, button)
+	local localX, localY = self:NormalizeLocalMousePos(x, y)
 	if self.subTooltips then
 		local tooltipSet = false
 		if button == nil then
-			local lineID, cursor = self:GetCursorByMousePos(x, y)
+			local lineID, cursor = self:GetCursorByMousePos(localX, localY)
 			local line = lineID and self.lines[lineID]
 			if line and line.tooltips then
 				for _, tooltip in pairs(line.tooltips) do
@@ -527,7 +538,7 @@ function EmojiTextBox:MouseMove(x, y, dx, dy, button)
 			self.tooltip = nil
 		end
 	end
-	return inherited.MouseMove(self, x, y, dx, dy, button)
+	return inherited.MouseMove(self, localX, localY, dx, dy, button)
 end
 
 function EmojiTextBox:HitTest()

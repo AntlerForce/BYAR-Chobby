@@ -42,7 +42,7 @@ function Console:init(channelName, sendMessageListener, noHistoryLoad, onResizeF
 	else
 		font = Configuration:GetFont(Configuration.chatFontSize, "console_" .. Configuration.chatFontSize, {font = "fonts/n019003l.pfb", shadow = true}, true)
 	end
-	local HistoryTextBox = EmojiTextBox or TextBox
+	local HistoryTextBox = TextBox
 	self.tbHistory = HistoryTextBox:New {
 		x = 0,
 		right = 0,
@@ -60,13 +60,10 @@ function Console:init(channelName, sendMessageListener, noHistoryLoad, onResizeF
 
 		_inmousemove = false,
 		OnClick = { function(obj)
-			if not obj._inmousemove then
-				screen0:FocusControl(self.ebInputText)
-			end
 			obj._inmousemove = false
 		end},
 		OnMouseMove = { function(obj, x, y, dx, dy, button)
-			if button ~= 1 then
+			if button ~= 1 and button ~= true then
 				return
 			end
 			obj._inmousemove = true
