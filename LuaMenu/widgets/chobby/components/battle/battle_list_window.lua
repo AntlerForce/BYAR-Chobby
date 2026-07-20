@@ -785,15 +785,18 @@ function BattleListWindow:ItemInFilter(id)
 	local filterString = Configuration.gameConfig.battleListOnlyShow
 	if filterString ~= nil and filterString ~= "" then
 		local lowerFilter = string.lower(filterString)
+		local queryNoSpaces = lowerFilter:gsub("%s+", "")
+		local queryLen = #queryNoSpaces
 
 		-- Collect all searchable strings for this battle
 		local battleStrings = {battle.title, battle.mapName}
 		for _, user in ipairs(battle.users) do
 			battleStrings[#battleStrings + 1] = user
 		end
-		-- Include gameName (version hash) only for queries of 5+ chars
-		local queryLen = #(lowerFilter:gsub("%s+", ""))
+		-- Include gameName/version hash only for queries of 5+ chars
+		local lowerGameName
 		if queryLen >= 5 and battle.gameName then
+			lowerGameName = string.lower(battle.gameName)
 			battleStrings[#battleStrings + 1] = battle.gameName
 		end
 
@@ -804,9 +807,21 @@ function BattleListWindow:ItemInFilter(id)
 		end
 
 		local matched = false
+		if lowerGameName then
+			if string.find(lowerGameName, queryNoSpaces, 1, true) then
+				matched = true
+			elseif #queryNoSpaces == 40 and string.find(queryNoSpaces, "^[0-9a-f]+$") then
+				-- Battle gameName commonly includes a short commit hash; allow full 40-char hashes via prefix.
+				local shortHash8 = string.sub(queryNoSpaces, 1, 8)
+				local shortHash7 = string.sub(queryNoSpaces, 1, 7)
+				if string.find(lowerGameName, shortHash8, 1, true) or string.find(lowerGameName, shortHash7, 1, true) then
+					matched = true
+				end
+			end
+		end
 
 		-- Tier 1: Single-term exact substring (original behavior, fast path)
-		if #filterWords <= 1 then
+		if not matched and #filterWords <= 1 then
 			for _, battleString in ipairs(battleStrings) do
 				if string.find(string.lower(battleString), lowerFilter, 1, true) then
 					matched = true
@@ -831,7 +846,6 @@ function BattleListWindow:ItemInFilter(id)
 
 		-- Tier 2: Fuzzy subsequence match (min 4 chars, name-only)
 		if not matched then
-			local queryNoSpaces = lowerFilter:gsub("%s+", "")
 			if #queryNoSpaces >= 4 then
 				local threshold = #queryNoSpaces * 3
 				for _, battleString in ipairs(battleStrings) do
